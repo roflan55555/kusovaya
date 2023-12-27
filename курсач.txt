@@ -1,0 +1,333 @@
+#define _CRT_SECURE_NO_WARNINGS
+#include<vector>
+#include<list>
+#include<stack>
+#include <sstream>
+#include <fstream>
+#include <stdio.h>
+#include <iostream>
+#include <stdlib.h>
+#include "string"
+#include <locale.h>
+#include <windows.h> 
+using namespace std;
+int* visited;
+int** a;
+int n = -1;
+int main()
+{
+	COORD coord;
+	SetConsoleDisplayMode(GetStdHandle(STD_OUTPUT_HANDLE), CONSOLE_FULLSCREEN_MODE, &coord);
+	srand(time(0));
+	int s = 0;
+	string mes;
+	setlocale(LC_ALL, "rus");
+	FILE* file;
+	FILE* some;
+	int temp;
+	system("cls");
+	printf_s(" Министерство науки и высшего образования\n Добро пожаловать! Данная программа выполняет поиск независимых множеств вершин графа\n Выполнил:Краснорылов М.А.\n Группа: 22ВВС1\n Приняли: Акифьев И.В. и Юрова О.В.\n");
+	int i;
+	while (true) { // бесконечный цикл
+		printf_s(" Введите кол-во вершин графа(от 1 до 50): ");
+		int n;
+		while (!(cin >> n) || (cin.peek() != '\n') || n < 1 || n > 50)
+		{
+			cin.clear();
+			while (cin.get() != '\n');
+			cout << "Неккоректный ввод, введите от 1 до 50\n";
+		}
+
+		int** unchain;
+		unchain = (int**)malloc(sizeof(int*) * n);
+		for (int i = 0; i < n; i++)
+		{
+			unchain[i] = (int*)malloc(sizeof(int) * n);
+			for (int j = 0; j < n; j++) {
+				unchain[i][j] = -10;
+			}
+		}
+		int* many = (int*)malloc(sizeof(int) * n);
+
+		a = (int**)malloc(sizeof(int*) * n);//выделение памяти вод указатели
+		for (int i = 0; i < n; i++)
+		{
+			a[i] = (int*)malloc(sizeof(int) * n);//выделение памяти под массив
+		}
+
+		printf_s("\n Выберите способ построения графа: \n 1) Случайное заполнение \n");
+		printf_s(" 2) Считать граф из файла \n  Введите: ");
+		while (!(cin >> s) || (cin.peek() != '\n') || s < 1 || s > 2)
+		{
+			cin.clear();
+			while (cin.get() != '\n');
+			cout << "Неккоректный ввод, выберите 1 или 2\n";
+		}
+
+		printf_s("\n");
+		if (s == 1)
+		{
+			printf_s(" Матрица смежности ориентированного графа\n");
+			for (int i = 0; i < n; i++)
+			{
+
+				for (int j = i; j < n; j++)
+				{
+					a[i][j] = rand() % 3;//есть ребро или нет вероятность подкуручена чтобы более заполенный граф формировался
+
+					if (a[i][j] > 0)
+					{
+						temp = rand() % 2; //направление ребра 
+						if (temp > 0) {
+							a[i][j] = (rand() % 10) + 1;//вес ребра от 1 до 10
+							a[j][i] = 0;
+						}
+						else {
+							a[j][i] = (rand() % 10) + 1;
+							a[i][j] = 0;
+						}
+					}
+					else {
+						a[i][j] = 0;
+						a[j][i] = 0;
+					}
+				}
+			}
+
+			for (int i = 0; i < n; i++)
+			{
+				for (int j = 0; j < n; j++)
+				{
+					printf_s("%-5d  ", a[i][j]);
+				}
+				printf_s("\n");
+			}
+		}
+		if (s == 2)
+		{
+			file = fopen("matrix.txt", "w");
+			for (int i = 0; i < n; i++)
+			{
+				for (int j = i; j < n; j++)
+				{
+					a[i][j] = rand() % 2;//есть ребро или нет
+					if (a[i][j] == 1)
+					{
+						temp = rand() % 2; //направление ребра
+						if (temp == 1) {
+							a[i][j] = (rand() % 10) + 1;//вес ребра
+							a[j][i] = 0;
+						}
+						else {
+							a[i][j] = 0;
+							a[j][i] = (rand() % 10) + 1;
+						}
+					}
+					else {
+						a[i][j] = 0;
+						a[j][i] = 0;
+					}
+					a[i][j] = 0;//обнуление главной диагонали
+				}
+			}
+			for (int i = 0; i < n; i++) {
+				for (int j = 0; j < n; j++) {
+					fprintf_s(file, "%-5d  ", a[i][j]);
+				}
+				fprintf_s(file, "\n");
+			}
+			fclose(file);
+
+			file = fopen("matrix.txt", "r");
+			if (!file)
+				exit(EXIT_FAILURE);
+			for (int i = 0; i < n && !feof(file); i++) {
+				for (int j = 0; j < n && !feof(file); j++) {
+					fscanf(file, "%d", &a[i][j]);
+					printf_s("%-5d ", a[i][j]);
+				}
+				putchar('\n');
+			}
+			fclose(file);
+		}
+		printf_s("\n");
+		printf_s("\n");
+		printf_s("\n");
+		printf_s("\n");
+
+		int** vers = (int**)malloc(n * sizeof(int*));//выделение памяти под указатели(матрицу предков)
+
+		for (int i = 0; i < n; i++)
+		{
+			vers[i] = (int*)malloc(n * sizeof(int));//выделение памяти под значения(матрицы предков)
+		}
+		for (int i = 0; i < n; i++)
+		{
+			for (int j = 0; j <= n; j++)
+			{
+				vers[i][j] = -1;//инициализация значений в матрице
+			}
+
+		}
+		for (int i = 0; i < n; i++)
+		{
+			vers[i][0] = i;//нумерация первого столбца
+		}
+		int ch = 0;
+		for (int i = 0; i < n; i++)
+		{
+			for (int j = 0; j <= n; j++)
+			{
+
+				if (a[i][j] == 0 && i != j)//если мы находим в таблице смежности ноль и это не главная диагональ(находим не связанные вершины)
+				{
+					if (a[i][j] == 0 && a[j][i] == 0)
+					{
+						vers[i][j + 1] = j;//то значение ячейки матрицы предков равно номеру столбца начиная с первого(не с нулевого)----(сохраняем что данная вершина i не связана с вершиной j)
+					}
+				}
+			}
+		}
+		printf_s(" Матрица предков\n наличие связи - 1\n отсутствие связи - номер вершины \n");
+		for (int i = 0; i < n; i++)
+		{
+			for (int j = 0; j <= n; j++)
+			{
+				printf_s("%-5d  ", vers[i][j]);//вывести матрицу предков
+
+			}
+			printf_s("\n");
+		}
+		visited = (int*)malloc(n * sizeof(int));//выделить память под массив посещение
+		for (int i = 0; i < n; i++)
+		{
+			visited[i] = 0;//указать что ни одна еще не посещена
+		}
+		FILE* fp;
+		char name[] = "result.txt";
+		fp = fopen(name, "w");
+		vector<int>data;
+		int summ = 0;
+		for (int i = 0; i < n; i++)
+		{
+			for (int k = 0; k < n; k++)
+			{
+				visited[k] = -1;//сбросить посещаемость
+			}
+			fprintf_s(fp, "Независимые с вершиной :%d\n", vers[i][0]);
+			printf_s("Независимые с вершиной :%d\n", vers[i][0]);
+			for (int j = 0; j < n; j++)
+			{
+				if (vers[i][j + 1] >= 0)//Проверка на отрицательные значения(нетронутые при генерации матрицы предков значения)
+				{
+					ch = vers[i][j + 1];//запись проверяемого значения в временную переменную
+					visited[j] = ch;//отметка о посещении вершины
+
+					for (int k = 0; k < n; k++)//обход каждой ячейки в ряде матрицы предков
+					{
+						int p = vers[i][k + 1];
+						if (p >= 0 && ch != p && a[ch][p] != 1 && visited[k] == -1)
+						{
+							data.push_back(0);//если 2 вершины Cp и p (vers[i][j + 1] и vers[i][k + 1]) не связаны то закинуть в конец вектора 0
+						}
+						if (p >= 0 && ch != p && a[ch][p] == 1 && visited[k] == -1)
+						{
+							data.push_back(1);//если связаны по матрице смежности то закинуть в конец вектора 1
+						}
+					}
+					for (int k = 0; k < data.size(); k++)
+					{
+						if (data[k] == 1)
+						{
+							summ++;//подсчет единиц в векторе
+						}
+					}
+					if (summ == 0)
+					{
+						printf_s("%d ", ch);
+						unchain[vers[i][0]][j] = ch;
+						fprintf_s(fp, "%d ", ch);//вывод в файл полученные множества
+					}
+					else {
+						printf_s("\n%d \n", ch);
+						unchain[vers[i][0]][j] = ch;
+						fprintf_s(fp, "\n%d \n", ch);
+					}
+					summ = 0;
+				}
+				data.clear();//очистить вектор
+			}
+			fprintf_s(fp, "\n");
+			printf_s("\n");
+		}
+		data.clear();//очистить вектор
+		//for (int i = 0; i < n; i++) //вывод массива
+		//	{
+
+		//		for (int j = 0; j < n; j++) {
+		//			printf("%d\t", unchain[i][j]);
+		//		}
+		//		printf("\n");
+		//	}
+		int tik;
+		bool flaglocal = false;
+		bool flaglobal = true;
+		for (int t = 0; t < n; t++) {
+			int tak = 1;
+			data.push_back(t);
+			for (int i = 0; i < n; i++) {
+				for (int j = 0; j < n; j++) {
+					if (unchain[i][j] != -10) {
+						flaglobal = true;
+						tik = tak;
+						while (tik != 0) {
+							flaglocal = false;
+							for (int k = 0; k < n; k++) {
+								if (unchain[unchain[i][j]][k] == data[tik - 1]) {
+									flaglocal = true;
+									break;
+								}
+							}
+							flaglobal = flaglobal && flaglocal;
+							tik--;
+						}
+						if (flaglobal) {
+							data.push_back(unchain[i][j]);
+							tak++;
+						}
+					}
+				}
+			}
+
+			if (data.size() != 1) {
+				if (data.size() > 2) {
+					for (int i = 0; i < data.size(); i++) {
+						for (int j = i; j < data.size(); j++) {
+							if (i != j) {
+								printf("Подмножество %d %d\n", data[i], data[j]);
+							}
+						}
+					}
+				}
+				printf("Множество\n");
+				while (!data.empty()) {
+					
+					printf("%d ", data[tak - 1]);
+					data.pop_back();
+					tak--;
+				}
+			}
+			printf("\n");
+			data.clear();
+		}
+		cout << " Выполнить программу еще раз? (1 - да, 2 - нет)\n";
+		while (!(cin >> i) || (cin.peek() != '\n') || i < 1 || i > 2)
+		{
+			cin.clear();
+			while (cin.get() != '\n');
+			cout << "Неккоректный ввод, выберите 1 или 2\n";
+		}
+		if (i != 1) break;
+		system("cls"); // очищаем экран	
+	}
+}
